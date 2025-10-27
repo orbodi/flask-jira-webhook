@@ -164,8 +164,11 @@ def monitoring_worker():
     """
     global api_status
     
+    logger.info("Thread de monitoring démarré")
+    
     while True:
         try:
+            logger.debug(f"Début du cycle de monitoring pour {len(MONITORED_APIS)} API(s)")
             for api in MONITORED_APIS:
                 api_url = api['url']
                 api_name = api['name']
@@ -230,15 +233,23 @@ def start_monitoring():
     """
     global monitoring_thread
     
+    logger.info(f"Tentative de démarrage du monitoring...")
+    logger.info(f"APIs configurées: {MONITORED_APIS}")
+    
     if not MONITORED_APIS:
         logger.warning("Aucune API à monitorer configurée")
         return
     
     if monitoring_thread is None or not monitoring_thread.is_alive():
-        monitoring_thread = threading.Thread(target=monitoring_worker, daemon=True)
-        monitoring_thread.start()
-        api_names = [api['name'] for api in MONITORED_APIS]
-        logger.info(f"Monitoring démarré pour {len(MONITORED_APIS)} API(s): {', '.join(api_names)}")
+        try:
+            monitoring_thread = threading.Thread(target=monitoring_worker, daemon=True)
+            monitoring_thread.start()
+            api_names = [api['name'] for api in MONITORED_APIS]
+            logger.info(f"Monitoring démarré pour {len(MONITORED_APIS)} API(s): {', '.join(api_names)}")
+        except Exception as e:
+            logger.error(f"Erreur lors du démarrage du monitoring: {str(e)}")
+    else:
+        logger.info("Monitoring déjà actif")
 
 @app.route('/health', methods=['GET'])
 def health_check():
