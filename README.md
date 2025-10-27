@@ -1,35 +1,15 @@
 # Jira Webhook pour Monitoring d'APIs
 
-Ce projet fournit un webhook Flask qui :
-- **Monitore activement** vos APIs Spring Boot via leurs endpoints `/actuator/health`
-- **Détecte automatiquement** les pannes et downtime
-- **Crée automatiquement** des tickets Jira pour les incidents
-- **Reçoit** les alertes Prometheus (optionnel)
+Webhook Flask qui **monitore activement** vos APIs Spring Boot et **crée automatiquement** des tickets Jira lors des pannes.
 
-## Fonctionnalités
+## ✨ Fonctionnalités principales
 
-### 🎯 Monitoring Proactif
-- ✅ **Monitoring actif des APIs Spring Boot** via `/actuator/health`
-- ✅ **Détection automatique de downtime** en temps réel
-- ✅ **Vérifications périodiques** configurables (défaut: 30s)
-- ✅ **Gestion des tentatives** avant création de ticket
-
-### 🎫 Intégration Jira
-- ✅ **Création automatique de tickets** pour les APIs down
-- ✅ **Support API Jira v2** (compatible instances locales)
-- ✅ **Tickets détaillés** avec actions recommandées
-- ✅ **Priorités intelligentes** (High pour les pannes d'API)
-
-### 🔧 Configuration & Déploiement
-- ✅ **Configuration via variables d'environnement**
-- ✅ **Support Docker et Docker Compose**
-- ✅ **Endpoints de monitoring et de santé**
-- ✅ **Logging complet** pour le debugging
-
-### 📊 Compatibilité
-- ✅ **Réception des alertes Prometheus** (optionnel)
-- ✅ **Mapping intelligent des niveaux de sévérité**
-- ✅ **Support multi-APIs** simultané
+- 🎯 **Monitoring proactif** des APIs Spring Boot via `/actuator/health`
+- 🚨 **Détection automatique** des pannes en temps réel
+- 🎫 **Création automatique** de tickets Jira détaillés
+- ⚙️ **Configuration flexible** (priorités, assignés, composants)
+- 🐳 **Déploiement Docker** simple
+- 📊 **Support Prometheus** (optionnel)
 
 ## Structure du projet
 
@@ -45,118 +25,68 @@ Jira-webhook/
 └── README.md               # Documentation complète
 ```
 
-## Configuration
+## ⚙️ Configuration rapide
 
-### 1. Variables d'environnement
-
-Copiez `env.example` vers `.env` et configurez les variables :
+### 1. Variables essentielles
 
 ```bash
+# Copier le template
 cp env.example .env
+
+# Configuration Jira
+JIRA_URL=url-jira
+JIRA_USERNAME=your-username
+JIRA_API_TOKEN=your-password
+JIRA_PROJECT_KEY=TEST
+
+# APIs à monitorer (format: URL|NOM_API)
+MONITORED_APIS=http://api1.com|User-Service,http://api2.com:8080|Payment-Service
+
+# Personnalisation des tickets (optionnel)
+TICKET_PRIORITY_API_DOWN=High
+TICKET_ASSIGNEE_API_DOWN=john.doe
+TICKET_LABELS_API_DOWN=api-monitoring,spring-boot,critical
 ```
 
-> 💡 **Conseil** : Utilisez `python test_jira_connection.py` pour tester votre configuration Jira avant de démarrer le service.
-
-Variables requises :
-- `JIRA_URL` : URL de votre instance Jira (ex: https://jiraprod.eid.local)
-- `JIRA_USERNAME` : Nom d'utilisateur Jira
-- `JIRA_API_TOKEN` : Mot de passe Jira (ou token API)
-- `JIRA_PROJECT_KEY` : Clé du projet Jira (ex: TEST)
-- `JIRA_ISSUE_TYPE` : Type de ticket (par défaut: Incident)
-
-Variables de monitoring :
-- `MONITORED_APIS` : APIs à monitorer au format `URL|NOM_API,URL|NOM_API` (ex: `http://api1.com|User-Service,http://api2.com:8080|Payment-Service`)
-- `HEALTH_CHECK_INTERVAL` : Intervalle de vérification en secondes (défaut: 30)
-- `HEALTH_CHECK_TIMEOUT` : Timeout des requêtes en secondes (défaut: 10)
-- `HEALTH_CHECK_RETRY` : Nombre de tentatives avant création de ticket (défaut: 3)
-
-Variables de personnalisation des tickets :
-- `TICKET_PRIORITY_API_DOWN` : Priorité des tickets API down (défaut: High)
-- `TICKET_LABELS_API_DOWN` : Labels des tickets (séparés par des virgules, défaut: api-monitoring,spring-boot,critical,downtime)
-- `TICKET_ASSIGNEE_API_DOWN` : Assigné des tickets (optionnel)
-- `TICKET_COMPONENTS_API_DOWN` : Composants des tickets (séparés par des virgules, optionnel)
-
-> ⚡ **Performance** : 
-> - APIs critiques : 15-30 secondes
-> - APIs normales : 30-60 secondes
-> - APIs de test : 60-120 secondes
-
-Variables optionnelles :
-- `PORT` : Port de l'application (défaut: 5000)
-- `DEBUG` : Mode debug (défaut: False)
-
-### 2. Configuration des credentials Jira
-
-Pour votre instance Jira locale (`jiraprod.eid.local`), vous pouvez utiliser :
-- **Nom d'utilisateur** : Votre nom d'utilisateur Jira
-- **Mot de passe** : Votre mot de passe Jira
-
-Ou si vous préférez utiliser un token API :
-1. Connectez-vous à votre compte Jira
-2. Allez dans **Account Settings** > **Security** > **API tokens**
-3. Cliquez sur **Create API token**
-4. Donnez un nom au token et copiez-le
-
-## Installation et déploiement
-
-### Option 1: Docker Compose (Recommandé)
+### 2. Test de connexion
 
 ```bash
-# Cloner le projet
-git clone <repository-url>
-cd Jira-webhook
+python test_jira_connection.py
+```
 
-# Configurer les variables d'environnement
+## 🚀 Déploiement
+
+### Docker Compose (Recommandé)
+
+```bash
+# 1. Configuration
 cp env.example .env
 # Éditer .env avec vos paramètres
 
-# Tester la connexion Jira (optionnel mais recommandé)
+# 2. Test (optionnel)
 python test_jira_connection.py
 
-# Démarrer le service
+# 3. Démarrage
 docker-compose up -d
 
-# Vérifier les logs
+# 4. Vérification
 docker-compose logs -f
 ```
 
-### Option 2: Docker
+### Installation locale
 
 ```bash
-# Construire l'image
-docker build -t jira-webhook .
-
-# Lancer le conteneur
-docker run -d \
-  --name jira-webhook \
-  -p 5000:5000 \
-  --env-file .env \
-  jira-webhook
-```
-
-### Option 3: Installation locale
-
-```bash
-# Créer un environnement virtuel
+# Environnement virtuel
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# ou
 venv\Scripts\activate     # Windows
 
-# Installer les dépendances
+# Installation
 pip install -r requirements.txt
 
-# Configurer les variables d'environnement
-export JIRA_URL="https://jiraprod.eid.local"
-export JIRA_USERNAME="your-username"
-export JIRA_API_TOKEN="your-password"
-export JIRA_PROJECT_KEY="TEST"
-export MONITORED_APIS="http://api1.example.com,http://api2.example.com:8080"
-
-# Tester la connexion Jira
-python test_jira_connection.py
-
-# Lancer l'application
+# Configuration et démarrage
+export JIRA_URL="url-jira"
+export MONITORED_APIS="http://api1.com|User-Service"
 python app.py
 ```
 
