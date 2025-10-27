@@ -90,251 +90,67 @@ export MONITORED_APIS="http://api1.com|User-Service"
 python app.py
 ```
 
-## Configuration Prometheus
+## 📊 Support Prometheus (désactivé pour les tests)
 
-Ajoutez cette configuration dans votre `prometheus.yml` :
+Le support Prometheus est temporairement désactivé pour se concentrer sur le monitoring des APIs.
 
-```yaml
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-          - localhost:9093
+## 🔌 Endpoints API
 
-rule_files:
-  - "alert_rules.yml"
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/health` | GET | État de santé du service |
+| `/monitoring/status` | GET | Statut détaillé du monitoring |
+| `/monitoring/start` | POST | Démarre le monitoring |
+| `/` | GET | Page d'accueil |
 
-# Exemple de règle d'alerte
-groups:
-  - name: example
-    rules:
-      - alert: HighErrorRate
-        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "High error rate detected"
-          description: "Error rate is {{ $value }} errors per second"
-```
-
-Et dans votre `alertmanager.yml` :
-
-```yaml
-route:
-  group_by: ['alertname']
-  group_wait: 10s
-  group_interval: 10s
-  repeat_interval: 1h
-  receiver: 'jira-webhook'
-
-receivers:
-  - name: 'jira-webhook'
-    webhook_configs:
-      - url: 'http://your-webhook-server:5000/webhook/prometheus'
-        send_resolved: true
-```
-
-## Endpoints API
-
-### POST /webhook/prometheus
-Reçoit les alertes Prometheus et crée des tickets Jira.
-
-**Exemple de payload :**
-```json
-{
-  "alerts": [
-    {
-      "status": "firing",
-      "labels": {
-        "alertname": "HighErrorRate",
-        "severity": "critical"
-      },
-      "annotations": {
-        "summary": "High error rate detected",
-        "description": "Error rate is 0.15 errors per second"
-      }
-    }
-  ]
-}
-```
-
-### GET /health
-Vérifie l'état de santé du service et du monitoring.
-
-**Réponse :**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-01T12:00:00.000Z",
-  "jira_configured": true,
-  "monitoring_active": true,
-  "monitored_apis": 2,
-  "api_status": {
-    "http://api1.example.com": {
-      "status": "up",
-      "last_check": "2024-01-01T12:00:00.000Z",
-      "consecutive_failures": 0
-    }
-  }
-}
-```
-
-### GET /monitoring/status
-Affiche le statut détaillé du monitoring des APIs.
-
-**Réponse :**
-```json
-{
-  "monitoring_active": true,
-  "monitored_apis": ["http://api1.example.com", "http://api2.example.com"],
-  "api_status": {
-    "http://api1.example.com": {
-      "status": "up",
-      "last_check": "2024-01-01T12:00:00.000Z",
-      "consecutive_failures": 0,
-      "last_ticket_created": null
-    }
-  },
-  "config": {
-    "health_check_interval": 30,
-    "timeout": 10,
-    "retry_attempts": 3
-  }
-}
-```
-
-### POST /monitoring/start
-Démarre manuellement le monitoring des APIs.
-
-### GET /
-Page d'accueil avec informations sur le service.
-
-## Monitoring des APIs Spring Boot
-
-Le webhook peut maintenant **monitorer activement** vos APIs Spring Boot et créer automatiquement des tickets Jira quand elles sont down.
-
-### Configuration du monitoring
-
-1. **Ajoutez vos APIs dans `.env`** :
-```bash
-# Format: URL|NOM_API,URL|NOM_API
-MONITORED_APIS=http://api1.example.com|User-Service,http://api2.example.com:8080|Payment-Service,http://api3.example.com:9000|Notification-Service
-```
-
-2. **Configurez les paramètres de monitoring** :
-```bash
-HEALTH_CHECK_INTERVAL=30    # Vérification toutes les 30 secondes
-HEALTH_CHECK_TIMEOUT=10     # Timeout de 10 secondes
-HEALTH_CHECK_RETRY=3        # 3 tentatives avant création de ticket
-```
-
-3. **Personnalisez les tickets créés** (optionnel) :
-```bash
-TICKET_PRIORITY_API_DOWN=High
-TICKET_LABELS_API_DOWN=api-monitoring,spring-boot,critical,downtime
-TICKET_ASSIGNEE_API_DOWN=john.doe
-TICKET_COMPONENTS_API_DOWN=Backend,API,Monitoring
-```
+## 🎯 Monitoring des APIs
 
 ### Comment ça fonctionne
 
-1. **Health Check automatique** : Le webhook appelle `/actuator/health` de chaque API
-2. **Détection de downtime** : Si l'API ne répond pas ou retourne un statut != "UP"
-3. **Création de ticket** : Un ticket Jira est créé automatiquement avec :
-   - Priorité **High**
-   - Labels : `api-monitoring`, `spring-boot`, `critical`, `downtime`
-   - Description détaillée avec actions recommandées
+1. **Health Check automatique** : Appelle `/actuator/health` de chaque API
+2. **Détection de downtime** : Si l'API ne répond pas ou status != "UP"
+3. **Création de ticket** : Ticket Jira automatique avec détails complets
 
 ### Exemple de ticket créé
 
 ```
 [CRITICAL] API DOWN - User-Service
 
-API Monitoring Alert
-- API Name: User-Service
-- API URL: http://api1.example.com
-- Status: DOWN
+API DOWN - User-Service
+
+- URL: http://api1.example.com
 - Error: Connection Error
-- Timestamp: 2024-01-01T12:00:00.000Z
-- Health Check Endpoint: http://api1.example.com/actuator/health
+- Time: 2024-01-01 12:00:00
 
-Détails techniques:
-- L'API Spring Boot ne répond plus aux health checks
-- Vérifiez la disponibilité du service
-- Consultez les logs de l'application Spring Boot
-
-Actions recommandées:
-1. Vérifier les logs de l'application
-2. Redémarrer le service si nécessaire
-3. Vérifier les ressources système (CPU, mémoire, disque)
-4. Contrôler la connectivité réseau
+L'API ne répond plus aux health checks
 ```
 
-**Configuration du ticket :**
-- **Priorité** : High (configurable)
-- **Labels** : api-monitoring, spring-boot, critical, downtime (configurables)
-- **Assigné** : john.doe (optionnel)
-- **Composants** : Backend, API, Monitoring (optionnels)
+### Personnalisation des tickets
 
-## Mapping des sévérités
+```bash
+# Personnaliser le contenu des tickets
+TICKET_SUMMARY_PREFIX=[URGENT] API DOWN
+TICKET_DESCRIPTION_TITLE=Service indisponible
+TICKET_DESCRIPTION_MESSAGE=Le service ne répond plus, intervention requise
+```
 
-| Sévérité Prometheus | Priorité Jira | Labels |
-|-------------------|---------------|---------|
-| critical          | High          | prometheus, alert, critical |
-| high              | High          | prometheus, alert, high |
-| medium            | Medium        | prometheus, alert, medium |
-| low               | Medium        | prometheus, alert, low |
-| warning           | Medium        | prometheus, alert, warning |
-
-| Type d'alerte | Priorité Jira | Labels |
-|---------------|---------------|---------|
-| API DOWN      | High          | api-monitoring, spring-boot, critical, downtime |
-
-## Logs
-
-L'application génère des logs détaillés pour :
-- Réception des alertes
-- Création des tickets Jira
-- Erreurs de configuration
-- Erreurs de communication avec Jira
-
-## Dépannage
+## 🔧 Dépannage
 
 ### Vérifier la configuration
 ```bash
 curl http://localhost:5000/health
 ```
 
-### Tester le webhook
+### Tester le monitoring
 ```bash
-curl -X POST http://localhost:5000/webhook/prometheus \
-  -H "Content-Type: application/json" \
-  -d '{
-    "alerts": [{
-      "status": "firing",
-      "labels": {
-        "alertname": "TestAlert",
-        "severity": "critical"
-      },
-      "annotations": {
-        "summary": "Test alert",
-        "description": "This is a test alert"
-      }
-    }]
-  }'
-```
-
-### Tester le monitoring des APIs
-```bash
-# Vérifier le statut du monitoring
+# Statut du monitoring
 curl http://localhost:5000/monitoring/status
 
-# Démarrer le monitoring manuellement
+# Démarrer manuellement
 curl -X POST http://localhost:5000/monitoring/start
 ```
 
-### Vérifier les logs
+### Logs
 ```bash
 # Docker Compose
 docker-compose logs -f
@@ -343,17 +159,9 @@ docker-compose logs -f
 docker logs -f jira-webhook
 ```
 
-## Sécurité
+## 🔒 Sécurité
 
-- L'application utilise l'authentification Basic avec token API Jira
-- Les credentials sont stockés dans des variables d'environnement
-- L'application s'exécute avec un utilisateur non-root dans Docker
-- Aucune donnée sensible n'est loggée
-
-## Contribution
-
-1. Fork le projet
-2. Créez une branche feature (`git checkout -b feature/AmazingFeature`)
-3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrez une Pull Request
+- Authentification Basic avec credentials Jira
+- Variables d'environnement pour les secrets
+- Utilisateur non-root dans Docker
+- Aucune donnée sensible loggée
