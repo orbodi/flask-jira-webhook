@@ -15,12 +15,15 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Hook de démarrage pour Gunicorn
-@app.before_first_request
+# Hook de démarrage pour Gunicorn (compatible Flask 2.2+)
+@app.before_request
 def startup():
     """Démarrage automatique du monitoring"""
-    logger.info("Démarrage automatique du monitoring...")
-    start_monitoring()
+    global monitoring_started
+    if not hasattr(startup, 'monitoring_started'):
+        logger.info("Démarrage automatique du monitoring...")
+        start_monitoring()
+        startup.monitoring_started = True
 
 # Configuration Jira depuis les variables d'environnement
 JIRA_URL = os.getenv('JIRA_URL')
