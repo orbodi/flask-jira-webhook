@@ -250,7 +250,7 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "jira_configured": bool(JIRA_URL and JIRA_USERNAME and JIRA_API_TOKEN and JIRA_PROJECT_KEY),
         "monitoring_active": monitoring_thread is not None and monitoring_thread.is_alive(),
-        "monitored_apis": len([api for api in MONITORED_APIS if api.strip()]),
+        "monitored_apis": len(MONITORED_APIS),
         "api_status": api_status
     })
 
