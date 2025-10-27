@@ -8,9 +8,17 @@ import base64
 import threading
 import time
 from urllib.parse import urlparse
+import urllib3
 
-# Configuration du logging
-logging.basicConfig(level=logging.INFO)
+# Désactiver les warnings SSL pour les certificats auto-signés
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Configuration du logging avec horodatage
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -144,7 +152,8 @@ def create_jira_ticket(ticket_type, **kwargs):
         response = requests.post(
             f"{JIRA_URL}/rest/api/2/issue",
             headers=get_jira_headers(),
-            json=jira_ticket
+            json=jira_ticket,
+            verify=False  # Désactiver la vérification SSL pour les certificats auto-signés
         )
         
         if response.status_code == 201:
