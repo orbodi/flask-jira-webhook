@@ -196,7 +196,7 @@ def monitoring_worker():
                 if is_healthy:
                     # API est UP
                     if api_status[clean_url]['status'] == 'down':
-                        logger.info(f"API {api_name} ({clean_url}) est revenue UP")
+                        logger.info(f"🟢 API {api_name} ({clean_url}) est revenue UP")
                     api_status[clean_url]['status'] = 'up'
                     api_status[clean_url]['consecutive_failures'] = 0
                 else:
@@ -210,17 +210,22 @@ def monitoring_worker():
                     )
                     
                     if should_create_ticket and api_status[clean_url]['last_ticket_created'] is None:
-                        logger.warning(f"API {api_name} ({clean_url}) est DOWN: {message}")
+                        logger.warning(f"🔴 API {api_name} ({clean_url}) est DOWN: {message}")
                         result = create_jira_ticket('api_down', api_url=clean_url, api_name=api_name, error_message=message)
                         if result['success']:
                             api_status[clean_url]['last_ticket_created'] = current_time
-                            logger.info(f"Ticket créé pour API DOWN {api_name}: {result['ticket_key']}")
+                            logger.info(f"🎫 Ticket créé pour API DOWN {api_name}: {result['ticket_key']}")
+                        else:
+                            logger.error(f"❌ Échec création ticket pour {api_name}: {result['error']}")
                     
                     api_status[clean_url]['status'] = 'down'
                 
-                logger.debug(f"Health check {api_name} ({clean_url}): {message}")
+                # Log de chaque vérification
+                status_icon = "✅" if is_healthy else "❌"
+                logger.info(f"{status_icon} {api_name} ({clean_url}): {message}")
             
             # Attendre avant la prochaine vérification
+            logger.info(f"⏳ Attente de {HEALTH_CHECK_INTERVAL}s avant la prochaine vérification...")
             time.sleep(HEALTH_CHECK_INTERVAL)
             
         except Exception as e:
