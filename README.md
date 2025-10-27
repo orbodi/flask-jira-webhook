@@ -9,7 +9,6 @@ Webhook Flask qui **monitore activement** vos APIs Spring Boot et **crée automa
 - 🎫 **Création automatique** de tickets Jira détaillés
 - ⚙️ **Configuration flexible** (priorités, assignés, composants)
 - 🐳 **Déploiement Docker** simple
-- 📊 **Support Prometheus** (optionnel)
 
 ## Structure du projet
 
@@ -90,9 +89,9 @@ export MONITORED_APIS="http://api1.com|User-Service"
 python app.py
 ```
 
-## 📊 Support Prometheus (désactivé pour les tests)
+## 📊 Support Prometheus
 
-Le support Prometheus est temporairement désactivé pour se concentrer sur le monitoring des APIs.
+Le support Prometheus a été supprimé pour se concentrer uniquement sur le monitoring des APIs.
 
 ## 🔌 Endpoints API
 
@@ -116,12 +115,6 @@ Le support Prometheus est temporairement désactivé pour se concentrer sur le m
 ```
 [CRITICAL] API DOWN - User-Service
 
-API DOWN - User-Service
-
-- URL: http://api1.example.com
-- Error: Connection Error
-- Time: 2024-01-01 12:00:00
-
 L'API ne répond plus aux health checks
 ```
 
@@ -130,7 +123,6 @@ L'API ne répond plus aux health checks
 ```bash
 # Personnaliser le contenu des tickets
 TICKET_SUMMARY_PREFIX=[URGENT] API DOWN
-TICKET_DESCRIPTION_TITLE=Service indisponible
 TICKET_DESCRIPTION_MESSAGE=Le service ne répond plus, intervention requise
 ```
 

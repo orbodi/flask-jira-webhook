@@ -29,14 +29,7 @@ TIMEOUT = int(os.getenv('HEALTH_CHECK_TIMEOUT', '10'))  # secondes
 RETRY_ATTEMPTS = int(os.getenv('HEALTH_CHECK_RETRY', '3'))
 
 # Configuration des tickets
-TICKET_PRIORITY_API_DOWN = os.getenv('TICKET_PRIORITY_API_DOWN', 'High')
-TICKET_LABELS_API_DOWN = os.getenv('TICKET_LABELS_API_DOWN', 'api-monitoring,spring-boot,critical,downtime').split(',')
-TICKET_ASSIGNEE_API_DOWN = os.getenv('TICKET_ASSIGNEE_API_DOWN', '')
-TICKET_COMPONENTS_API_DOWN = os.getenv('TICKET_COMPONENTS_API_DOWN', '').split(',') if os.getenv('TICKET_COMPONENTS_API_DOWN') else []
-
-# Personnalisation du contenu des tickets
 TICKET_SUMMARY_PREFIX = os.getenv('TICKET_SUMMARY_PREFIX', '[CRITICAL] API DOWN')
-TICKET_DESCRIPTION_TITLE = os.getenv('TICKET_DESCRIPTION_TITLE', 'API DOWN')
 TICKET_DESCRIPTION_MESSAGE = os.getenv('TICKET_DESCRIPTION_MESSAGE', "L'API ne répond plus aux health checks")
 
 # Parser les APIs monitorées
@@ -113,11 +106,11 @@ def check_api_health(api_url):
 
 def create_jira_ticket(ticket_type, **kwargs):
     """
-    Crée un ticket Jira (unifié pour APIs et Prometheus)
+    Crée un ticket Jira pour les APIs down
     
     Args:
-        ticket_type: 'api_down' ou 'prometheus'
-        **kwargs: Données spécifiques selon le type
+        ticket_type: 'api_down'
+        **kwargs: Données spécifiques (api_url, api_name, error_message)
     """
     try:
         if ticket_type == 'api_down':
@@ -128,50 +121,13 @@ def create_jira_ticket(ticket_type, **kwargs):
             
             fields = {
                 "project": {"key": JIRA_PROJECT_KEY},
-                "issuetype": {"name": JIRA_ISSUE_TYPE},
                 "summary": f"{TICKET_SUMMARY_PREFIX} - {api_name}",
-                "description": f"""**{TICKET_DESCRIPTION_TITLE} - {api_name}**
-
-- **URL**: {api_url}
-- **Error**: {error_message}
-- **Time**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-{TICKET_DESCRIPTION_MESSAGE}""",
-                "priority": {"name": TICKET_PRIORITY_API_DOWN},
-                "labels": TICKET_LABELS_API_DOWN
+                "description": f"{TICKET_DESCRIPTION_MESSAGE}",
+                "issuetype": {"name": JIRA_ISSUE_TYPE}
             }
-            
-            # Ajouter assignee et composants si configurés
-            if TICKET_ASSIGNEE_API_DOWN:
-                fields["assignee"] = {"name": TICKET_ASSIGNEE_API_DOWN}
-            if TICKET_COMPONENTS_API_DOWN:
-                fields["components"] = [{"name": comp.strip()} for comp in TICKET_COMPONENTS_API_DOWN if comp.strip()]
                 
-        elif ticket_type == 'prometheus':
-            # Ticket pour alerte Prometheus
-            alert_data = kwargs['alert_data']
-            alert_name = alert_data.get('alerts', [{}])[0].get('labels', {}).get('alertname', 'Unknown Alert')
-            alert_status = alert_data.get('alerts', [{}])[0].get('status', 'unknown')
-            alert_severity = alert_data.get('alerts', [{}])[0].get('labels', {}).get('severity', 'medium')
-            alert_description = alert_data.get('alerts', [{}])[0].get('annotations', {}).get('description', 'No description')
-            alert_summary = alert_data.get('alerts', [{}])[0].get('annotations', {}).get('summary', alert_name)
-            
-            fields = {
-                "project": {"key": JIRA_PROJECT_KEY},
-                "issuetype": {"name": JIRA_ISSUE_TYPE},
-                "summary": f"[{alert_severity.upper()}] {alert_summary}",
-                "description": f"""**Alerte Prometheus**
-
-- **Alerte**: {alert_name}
-- **Statut**: {alert_status}
-- **Sévérité**: {alert_severity}
-- **Description**: {alert_description}
-- **Time**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}""",
-                "priority": {"name": "High" if alert_severity.lower() in ['critical', 'high'] else "Medium"},
-                "labels": ["prometheus", "alert", alert_severity.lower()]
-            }
         else:
-            raise ValueError(f"Type de ticket non supporté: {ticket_type}")
+            raise ValueError(f"Type de ticket non supporté: {ticket_type}. Seul 'api_down' est supporté.")
         
         # Envoi de la requête à Jira
         jira_ticket = {"fields": fields}
@@ -200,13 +156,7 @@ def create_jira_ticket(ticket_type, **kwargs):
         logger.error(f"Erreur création ticket: {str(e)}")
         return {"success": False, "error": str(e)}
 
-# Webhook Prometheus désactivé pour le moment
-# @app.route('/webhook/prometheus', methods=['POST'])
-# def prometheus_webhook():
-#     """
-#     Endpoint webhook pour recevoir les alertes Prometheus (désactivé)
-#     """
-#     return jsonify({"message": "Webhook Prometheus désactivé pour les tests"}), 503
+# Support Prometheus supprimé pour le moment
 
 def monitoring_worker():
     """
@@ -334,12 +284,7 @@ def monitoring_status():
             "health_check_interval": HEALTH_CHECK_INTERVAL,
             "timeout": TIMEOUT,
             "retry_attempts": RETRY_ATTEMPTS,
-            "ticket_priority": TICKET_PRIORITY_API_DOWN,
-            "ticket_labels": TICKET_LABELS_API_DOWN,
-            "ticket_assignee": TICKET_ASSIGNEE_API_DOWN,
-            "ticket_components": TICKET_COMPONENTS_API_DOWN,
             "ticket_summary_prefix": TICKET_SUMMARY_PREFIX,
-            "ticket_description_title": TICKET_DESCRIPTION_TITLE,
             "ticket_description_message": TICKET_DESCRIPTION_MESSAGE
         }
     })
